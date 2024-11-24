@@ -123,15 +123,15 @@ class IO:
             raise NameError("Choose either ASCII or HDF5 as meshfile_type, or add a different encoding!")
 
         self.mt_d, self.mt_b1, self.mt_b2, self.mt_b3 = None, None, None, None
-
         if self.meshfile_format == "XDMF":
             # read in xdmf mesh - domain
             with io.XDMFFile(self.comm, self.mesh_domain, "r", encoding=encoding) as infile:
                 self.mesh = infile.read_mesh(name=self.gridname_domain)
-                try:
-                    self.mt_d = infile.read_meshtags(self.mesh, name=self.gridname_domain)
-                except:
-                    self.mt_d = None
+
+                # try:
+                #     self.mt_d = infile.read_meshtags(self.mesh, name=self.gridname_domain)
+                # except:
+                self.mt_d = None
 
         elif self.meshfile_format == "gmsh":
             # seems that we cannot infer the dimension from the mesh file but have to provide it to the read function...
@@ -465,7 +465,10 @@ class IO:
                 fib_func.append(fib_func_input[si])
 
             # assert that field is actually always normalized!
-            fib_func[si] /= ufl.sqrt(ufl.dot(fib_func[si], fib_func[si]))
+            with io.XDMFFile(self.comm, self.output_path + "/fibers_" + str(si + 1) + ".xdmf", "w") as outfile:
+                outfile.write_mesh(self.mesh)
+                outfile.write_function(fib_func[si], 0)
+            # fib_func[si] /= ufl.sqrt(ufl.dot(fib_func[si], fib_func[si]))
 
             si += 1
 
