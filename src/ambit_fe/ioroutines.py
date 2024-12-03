@@ -416,8 +416,22 @@ class IO:
 
         self.comm.Barrier()
 
-    # read in fibers defined at nodes (nodal fiber-coordiante files have to be present)
     def readin_fibers(self, fibarray, V_fib, dx_, domids, order_disp):
+        from pathlib import Path
+        import cardiac_geometries
+
+        geo = cardiac_geometries.geometry.Geometry.from_folder(
+            comm=self.mesh.comm, folder=Path(self.fiber_data[0]).parent
+        )
+
+        f0 = fem.Function(V_fib, name="Fiber1")
+        s0 = fem.Function(V_fib, name="Sheet1")
+        f0.interpolate(geo.f0)
+        s0.interpolate(geo.s0)
+        return [f0, s0]
+
+    # read in fibers defined at nodes (nodal fiber-coordiante files have to be present)
+    def readin_fibers2(self, fibarray, V_fib, dx_, domids, order_disp):
         ts = time.time()
         utilities.print_status("Reading in fibers...", self.comm, e=" ")
 

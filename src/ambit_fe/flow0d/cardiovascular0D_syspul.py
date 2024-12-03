@@ -106,6 +106,8 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         self.R_vout_l_max = params["R_vout_l_max"]
         self.R_vout_r_min = params["R_vout_r_min"]
         self.R_vout_r_max = params["R_vout_r_max"]
+        self.I_ext = params.get("I_ext", 0.0)
+        self.I_ext_start = params.get("I_ext_start", 0.0)
 
         # valve inertances
         try:
@@ -266,7 +268,14 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
     def evaluate(self, x, t, df=None, f=None, dK=None, K=None, c=[], y=[], a=None):
         fnc = self.evaluate_chamber_state(y, t)
 
-        cardiovascular0Dbase.evaluate(self, x, t, df, f, dK, K, c, y, a, fnc)
+        I_ext = 0.0
+        if self.I_ext_start <= t <= self.I_ext_start + self.T_cycl:
+            I_ext = self.I_ext
+
+        print("I_ext = ", I_ext)
+        extra_args = [I_ext]
+
+        cardiovascular0Dbase.evaluate(self, x, t, df, f, dK, K, c, y, a, fnc, extra_args=extra_args)
 
     def equation_map(self):
         # variable map
@@ -337,6 +346,8 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         E_v_r_ = sp.Symbol("E_v_r_")
         E_at_l_ = sp.Symbol("E_at_l_")
         E_at_r_ = sp.Symbol("E_at_r_")
+        I_ext_ = sp.Symbol("I_ext_")
+        self.extra_args.append(I_ext_)
 
         # dofs to differentiate w.r.t.
         self.x_[self.varmap["q_vin_l"]] = q_vin_l_
@@ -467,7 +478,7 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         self.df_[5] = (self.I_ar_sys / self.Z_ar_sys) * q_arp_sys_  # aortic root inertia
         self.df_[6] = self.C_ar_sys * p_ard_sys_  # systemic arterial volume rate
         self.df_[7] = (self.L_ar_sys / self.R_ar_sys) * q_ar_sys_  # systemic arterial inertia
-        self.df_[8] = self.C_ven_sys * p_ven_sys_  # systemic venous volume rate
+        self.df_[8] = self.C_ven_sys * p_ven_sys_ - I_ext_  # systemic venous volume rate
         for n in range(self.vs):
             self.df_[9 + n] = (L_ven_sys[n] / R_ven_sys[n]) * q_ven_sys_[n]  # systemic venous inertia
             # -----------------------------------------------------------
@@ -558,7 +569,7 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         self.a_[nc + 2] = VQ_at_l_ * self.switch_V[2]
         self.a_[nc + 3] = VQ_at_r_ * self.switch_V[3]
         self.a_[nc + 4] = self.C_ar_sys * p_ard_sys_ + self.V_ar_sys_u
-        self.a_[nc + 5] = self.C_ven_sys * p_ven_sys_ + self.V_ven_sys_u
+        self.a_[nc + 5] = self.C_ven_sys * p_ven_sys_ + self.V_ven_sys_u - I_ext_
         self.a_[nc + 6] = self.C_ar_pul * p_ar_pul_ + self.V_ar_pul_u
         self.a_[nc + 7] = self.C_ven_pul * p_ven_pul_ + self.V_ven_pul_u
 
