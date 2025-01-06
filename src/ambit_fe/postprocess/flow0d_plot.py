@@ -61,8 +61,8 @@ parser.add_argument(
 )  # whether some external data should be added to some plots (needs to be specified...)
 
 
-def main():
-    args = parser.parse_args()
+def main(argv=None):
+    args = parser.parse_args(argv)
 
     postprocess0D(
         args.p,
@@ -494,6 +494,7 @@ def postprocess0D(
             # load volume data
             vols = np.loadtxt(path + "/results_" + sname + "_" + list(groups[5].values())[0][c] + ".txt", usecols=1)
             # add together
+
             for i in range(len(volall)):
                 volall[i] += vols[i]
 
