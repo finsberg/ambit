@@ -48,7 +48,7 @@ def main():
         "subsolver_params": {"tol_res": 1e-6, "tol_inc": 1e-6},
     }
 
-    number_of_cycles = 1
+    number_of_cycles = 2
     """
     Parameters for the solid mechanics time integration scheme, plus the global time parameters
     """
@@ -72,7 +72,7 @@ def main():
         # the initial conditions of the 0D ODE model (defined below)
         "initial_conditions": init(),
         # the periodic state criterion tolerance
-        "eps_periodic": 0.05,
+        "eps_periodic": 0.01,
         # which variables to check for periodicity (default, 'allvar')
         "periodic_checktype": ["allvar"],
     }
@@ -83,6 +83,7 @@ def main():
     MODEL_PARAMS_FLOW0D = {  # the type of 0D model: 'syspul' refers to the closed-loop systemic+pulmonary circulation model
         "modeltype": "syspul",
         # the parameters of the 0D model (defined below)
+        "write_results_every": 1,
         "parameters": param(),
         # The 0D model is setup in a modular fashion which allows each of the four cardiac chambers to be either modeled as purely 0D (time-varying elastance models),
         # as a 3D solid mechanics chamber, or as a 3D fluid domain.
@@ -117,11 +118,12 @@ def main():
         "surface_ids": [[1], [2]],
         # the coupling type: 'monolithic_lagrange' here is a more general scheme that enforces equality of 3D and 0D fluxes/volumes via (Lagrange) multipliers, outsourcing the 0D
         # solve to a sub-solver in each nonlinear iteration, whereas 'monolithic_direct' would embed the 0D system of equations directly into the monolithic system matrix
-        "coupling_type": "monolithic_lagrange",
+        "coupling_type": "monolithic_direct",
         # for 'monolithic_lagrange', we need the pressures to be the exchanged quantities between 3D and 0D world (being the Lagrange multipliers)
-        "coupling_quantity": ["pressure", "pressure"],
+        # "coupling_quantity": ["pressure", "pressure"],
+        "coupling_quantity": ["volume", "volume"],
         # the coupling variables which are enforced between 3D and 0D: can be volume or flux
-        "variable_quantity": ["flux", "flux"],
+        # "variable_quantity": ["flux", "flux"],
     }
 
     """
@@ -302,6 +304,8 @@ def param():
     E_v_min_r = 10.0e-6  # minimum right ventricular elastance
 
     return {
+        "I_ext": 0.0,  # external current
+        "I_ext_start": 20.0,  # start of external current
         "R_ar_sys": R_ar_sys,
         "C_ar_sys": C_ar_sys,
         "L_ar_sys": L_ar_sys,

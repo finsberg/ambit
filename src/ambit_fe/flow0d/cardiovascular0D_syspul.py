@@ -106,6 +106,11 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         self.R_vout_l_max = params["R_vout_l_max"]
         self.R_vout_r_min = params["R_vout_r_min"]
         self.R_vout_r_max = params["R_vout_r_max"]
+        self.I_ext = params.get("I_ext", 0.0)
+        self.I_ext_start = params.get("I_ext_start", 0.0)
+        self.I_ext_duration = params.get("I_ext_duration", 0.0)
+        self.I_ext_period = params.get("I_ext_period", 100.0)
+        self.I_ext_bleed = params.get("I_ext_bleed", 100.0)
 
         # valve inertances
         try:
@@ -266,7 +271,15 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
     def evaluate(self, x, t, df=None, f=None, dK=None, K=None, c=[], y=[], a=None):
         fnc = self.evaluate_chamber_state(y, t)
 
-        cardiovascular0Dbase.evaluate(self, x, t, df, f, dK, K, c, y, a, fnc)
+        I_ext = 0.0
+        if self.I_ext_start <= t <= self.I_ext_start + self.I_ext_duration:
+            # For each period of I_ext_period, I_ext is applied for I_ext_duration
+            if t % self.I_ext_period < self.I_ext_bleed:
+                I_ext = self.I_ext
+
+        extra_args = [I_ext]
+
+        cardiovascular0Dbase.evaluate(self, x, t, df, f, dK, K, c, y, a, fnc, extra_args=extra_args)
 
     def equation_map(self):
         # variable map
@@ -337,6 +350,8 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         E_v_r_ = sp.Symbol("E_v_r_")
         E_at_l_ = sp.Symbol("E_at_l_")
         E_at_r_ = sp.Symbol("E_at_r_")
+        I_ext_ = sp.Symbol("I_ext_")
+        self.extra_args.append(I_ext_)
 
         # dofs to differentiate w.r.t.
         self.x_[self.varmap["q_vin_l"]] = q_vin_l_
@@ -405,6 +420,8 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
             chdict_ao["po3"],
             chdict_ao["po4"],
         )
+
+        q_ext = I_ext_ * p_ar_sys_o3_
 
         # add coronary circulation equations
         if self.cormodel is not None:
@@ -496,7 +513,7 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
             - VQ_aort_sys_
         )  # aortic root flow balance
         self.f_[5] = (p_ard_sys_ - p_ar_sys_o3_) / self.Z_ar_sys + q_arp_sys_  # aortic root momentum
-        self.f_[6] = -q_arp_sys_ + q_ar_sys_  # systemic arterial flow balance
+        self.f_[6] = -q_arp_sys_ + q_ar_sys_ + q_ext  # systemic arterial flow balance
         self.f_[7] = (p_ven_sys_ - p_ard_sys_) / self.R_ar_sys + q_ar_sys_  # systemic arterial momentum
         self.f_[8] = -q_ar_sys_ + sum(q_ven_sys_)  # systemic venous flow balance
         for n in range(self.vs):

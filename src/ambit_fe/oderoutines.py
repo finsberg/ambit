@@ -26,38 +26,40 @@ class ode:
         self.comm = comm  # MPI communicator
 
     # evaluate model at current nonlinear iteration
-    def evaluate(self, x, t, df=None, f=None, dK=None, K=None, c=[], y=[], a=None, fnc=[]):
+    def evaluate(self, x, t, df=None, f=None, dK=None, K=None, c=[], y=[], a=None, fnc=[], extra_args=[]):
         if self.ode_parallel:
             x_arr = allgather_vec(x, self.comm)
         else:
             x_arr = x.array
 
+        args = [x_arr, c, t, fnc, extra_args]
+
         # ODE lhs (time derivative) residual part df
         if df is not None:
             for i in range(self.numdof):
-                df[i] = self.df__[i](x_arr, c, t, fnc)
+                df[i] = self.df__[i](*args)
 
         # ODE rhs residual part f
         if f is not None:
             for i in range(self.numdof):
-                f[i] = self.f__[i](x_arr, c, t, fnc)
+                f[i] = self.f__[i](*args)
 
         # ODE lhs (time derivative) stiffness part dK (ddf/dx)
         if dK is not None:
             for i in range(self.numdof):
                 for j in range(self.numdof):
-                    dK[i, j] = self.dK__[i][j](x_arr, c, t, fnc)
+                    dK[i, j] = self.dK__[i][j](*args)
 
         # ODE rhs stiffness part K (df/dx)
         if K is not None:
             for i in range(self.numdof):
                 for j in range(self.numdof):
-                    K[i, j] = self.K__[i][j](x_arr, c, t, fnc)
+                    K[i, j] = self.K__[i][j](*args)
 
         # auxiliary variable vector a (for post-processing or periodic state check)
         if a is not None:
             for i in range(self.numdof):
-                a[i] = self.a__[i](x_arr, c, t, fnc)
+                a[i] = self.a__[i](*args)
 
     # symbolic stiffness matrix contributions ddf_/dx, df_/dx
     def set_stiffness(self):
@@ -71,10 +73,11 @@ class ode:
         ts = time.time()
         utilities.print_status("ODE model: Calling lambdify for residual expressions...", self.comm, e=" ")
 
+        args = [self.x_, self.c_, self.t_, self.fnc_, self.extra_args]
         for i in range(self.numdof):
-            self.df__[i] = sp.lambdify([self.x_, self.c_, self.t_, self.fnc_], self.df_[i], "numpy")
-            self.f__[i] = sp.lambdify([self.x_, self.c_, self.t_, self.fnc_], self.f_[i], "numpy")
-            self.a__[i] = sp.lambdify([self.x_, self.c_, self.t_, self.fnc_], self.a_[i], "numpy")
+            self.df__[i] = sp.lambdify(args, self.df_[i], "numpy")
+            self.f__[i] = sp.lambdify(args, self.f_[i], "numpy")
+            self.a__[i] = sp.lambdify(args, self.a_[i], "numpy")
 
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.comm)
@@ -85,13 +88,13 @@ class ode:
         for i in range(self.numdof):
             for j in range(self.numdof):
                 if self.dK_[i][j] is not sp.S.Zero:
-                    self.dK__[i][j] = sp.lambdify([self.x_, self.c_, self.t_, self.fnc_], self.dK_[i][j], "numpy")
+                    self.dK__[i][j] = sp.lambdify(args, self.dK_[i][j], "numpy")
                 else:
-                    self.dK__[i][j] = lambda a, b, c, d: 0
+                    self.dK__[i][j] = lambda a, b, c, d, e: 0
                 if self.K_[i][j] is not sp.S.Zero:
-                    self.K__[i][j] = sp.lambdify([self.x_, self.c_, self.t_, self.fnc_], self.K_[i][j], "numpy")
+                    self.K__[i][j] = sp.lambdify(args, self.K_[i][j], "numpy")
                 else:
-                    self.K__[i][j] = lambda a, b, c, d: 0
+                    self.K__[i][j] = lambda a, b, c, d, e: 0
 
         te = time.time() - ts
         utilities.print_status("t = %.4f s" % (te), self.comm)
@@ -155,7 +158,7 @@ class ode:
     # set up the dof, coupling quantity, rhs, and stiffness arrays
     def set_solve_arrays(self):
         self.x_, self.a_, self.a__ = [0] * self.numdof, [0] * self.numdof, [0] * self.numdof
-        self.c_, self.fnc_ = [], []
+        self.c_, self.fnc_, self.extra_args = [], [], []
 
         self.df_, self.f_, self.df__, self.f__ = (
             [0] * self.numdof,
