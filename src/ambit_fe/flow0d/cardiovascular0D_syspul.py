@@ -514,7 +514,7 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         )  # aortic root flow balance
         self.f_[5] = (p_ard_sys_ - p_ar_sys_o3_) / self.Z_ar_sys + q_arp_sys_  # aortic root momentum
         self.f_[6] = -q_arp_sys_ + q_ar_sys_ + q_ext  # systemic arterial flow balance
-        self.f_[7] = (p_ven_sys_ - p_ard_sys_) / self.R_ar_sys + q_ar_sys_ + q_ext  # systemic arterial momentum
+        self.f_[7] = (p_ven_sys_ - p_ard_sys_) / self.R_ar_sys + q_ar_sys_  # systemic arterial momentum
         self.f_[8] = -q_ar_sys_ + sum(q_ven_sys_)  # systemic venous flow balance
         for n in range(self.vs):
             self.f_[9 + n] = (p_at_r_i_[n] - p_ven_sys_) / R_ven_sys[n] + q_ven_sys_[n]  # systemic venous momentum

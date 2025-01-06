@@ -379,8 +379,10 @@ class SolidmechanicsProblem(problem_base):
                     ]
                 except:
                     pass  # default is 'ode'
+
                 if self.mat_active_stress_type[n] == "ode":
                     self.act_curve.append(fem.Function(self.Vd_scalar))
+
                     self.ti.funcs_to_update.append(
                         {
                             self.act_curve[-1]: self.ti.timecurves(
@@ -1449,7 +1451,7 @@ class SolidmechanicsProblem(problem_base):
                 self.tau_a,
                 self.constitutive_models["MAT" + str(self.actpid)][self.activemodel[self.actpid - 1]][
                     "prescribed_file"
-                ].replace("*", str(N)),
+                ].replace("*", str(1 + (N - 1) % 1000)),
             )
 
     def evaluate_post_solve(self, t, N):

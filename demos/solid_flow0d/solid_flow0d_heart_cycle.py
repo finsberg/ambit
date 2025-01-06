@@ -29,7 +29,7 @@ def main():
         # at which step frequency to write results (set to 0 in order to not write any output)
         "write_results_every": 1,
         # where to write the output to
-        "output_path": basepath + "/tmp3/",
+        "output_path": basepath + "/tmp/",
         # which results to write: here, all 3D fields need to be specified, while the 0D model results are output nevertheless
         "results_to_write": ["displacement", "fibers"],
         # the 'midfix' for all simulation result file names: will be results_<simname>_<field>.xdmf/.h5/.txt
@@ -349,7 +349,7 @@ def param():
         "V_v_r_u": 8e3,  # unstressed right ventricular volume - NOT used here, since from 3D
         "V_ar_sys_u": 611e3,  # unstressed systemic arterial volume
         "V_ar_pul_u": 123e3,  # unstressed pulmonary arterial volume
-        "V_ven_sys_u": 596e3,  # unstressed systemic venous volume
+        "V_ven_sys_u": 2596e3,  # unstressed systemic venous volume
         "V_ven_pul_u": 120e3,
     }  # unstressed pulmonary venous volume
 
