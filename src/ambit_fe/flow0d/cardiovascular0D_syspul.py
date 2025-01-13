@@ -111,6 +111,7 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         self.I_ext_duration = params.get("I_ext_duration", 0.0)
         self.I_ext_period = params.get("I_ext_period", 100.0)
         self.I_ext_bleed = params.get("I_ext_bleed", 100.0)
+        self.total_volume_loss = params.get("volume_loss", np.inf)
 
         # valve inertances
         try:
@@ -135,6 +136,11 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         self.t_es = params["t_es"]
         self.T_cycl = params["T_cycl"]
 
+        self.V_v_l = 0.0
+        self.V_v_r = 0.0
+        self.V_v_l_n = 0.0
+        self.V_v_r_n = 0.0
+        self.volume_change = 0.0
         # unstressed compartment volumes (for post-processing)
         try:
             self.V_at_l_u = params["V_at_l_u"]
@@ -268,11 +274,25 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
 
         self.set_solve_arrays()
 
+    @property
+    def dt(self):
+        if hasattr(self, "_current_t") and hasattr(self, "_prev_t"):
+            return self._current_t - self._prev_t
+        else:
+            return 0.0
+
     def evaluate(self, x, t, df=None, f=None, dK=None, K=None, c=[], y=[], a=None):
         fnc = self.evaluate_chamber_state(y, t)
 
+        if hasattr(self, "_current_t") and t > self._current_t:
+            self._prev_t = self._current_t
+
+        self._current_t = t
         I_ext = 0.0
-        if self.I_ext_start <= t <= self.I_ext_start + self.I_ext_duration:
+        if (
+            self.I_ext_start <= t <= self.I_ext_start + self.I_ext_duration
+            and self.volume_change - 1e-6 > -self.total_volume_loss
+        ):
             # For each period of I_ext_period, I_ext is applied for I_ext_duration
             if t % self.I_ext_period < self.I_ext_bleed:
                 I_ext = self.I_ext
@@ -683,6 +703,40 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
             var_arr = var.array
 
         nc = len(self.c_)
+
+        Q_v_l = var_arr[self.varmap["Q_v_l"]]
+        Q_v_r = var_arr[self.varmap["Q_v_r"]]
+
+        V_v_l_n = self.V_v_l_n
+        V_v_l_np = -Q_v_l * self.dt + V_v_l_n
+        self.V_v_l = 0.5 * (V_v_l_n + V_v_l_np)
+        self.V_v_l_n = V_v_l_np
+
+        V_v_r_n = self.V_v_r_n
+        V_v_r_np = -Q_v_r * self.dt + V_v_r_n
+        self.V_v_r = 0.5 * (V_v_r_n + V_v_r_np)
+        self.V_v_r_n = V_v_r_np
+
+        total_volume = (
+            aux[self.auxmap["V_at_l"]]
+            + aux[self.auxmap["V_at_r"]]
+            + aux[self.auxmap["V_ar_sys"]]
+            + aux[self.auxmap["V_ven_sys"]]
+            + aux[self.auxmap["V_ar_pul"]]
+            + aux[self.auxmap["V_ven_pul"]]
+            + self.V_v_l
+            + self.V_v_r
+        )
+
+        if not hasattr(self, "total_volume_start"):
+            self.total_volume_start = total_volume
+
+        self.volume_change = (total_volume - self.total_volume_start) / 1e3  # mL
+
+        print(
+            "Total volume change: ",
+            self.volume_change,
+        )
 
         utilities.print_status("Output of 0D vascular model (syspul):", self.comm)
 
