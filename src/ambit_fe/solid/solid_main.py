@@ -198,6 +198,7 @@ class SolidmechanicsProblem(problem_base):
             self.io.mesh, (self.dg_type, self.order_disp - 1, (self.io.mesh.geometry.dim,))
         )
         self.Vd_scalar = fem.functionspace(self.io.mesh, (self.dg_type, self.order_disp - 1))
+        self.Vd_scalar_P1 = fem.functionspace(self.io.mesh, (self.dg_type, 0))
 
         # for output writing - function spaces on the degree of the mesh
         self.mesh_degree = self.io.mesh._ufl_domain._ufl_coordinate_element._degree
@@ -259,8 +260,12 @@ class SolidmechanicsProblem(problem_base):
         )
         # active stress
         # self.tau_a = fem.Function(self.Vq_scalar, name="tau_a")
-        self.tau_a = fem.Function(self.Vd_scalar, name="tau_a")
-        self.tau_a_old = fem.Function(self.Vd_scalar)
+        # self.tau_a = fem.Function(self.Vd_scalar, name="tau_a")
+        # self.tau_a_old = fem.Function(self.Vd_scalar)
+
+        self.tau_a = fem.Function(self.Vd_scalar_P1, name="tau_a")
+        self.tau_a_old = fem.Function(self.Vd_scalar_P1)
+
         self.amp_old, self.amp_old_set = fem.Function(self.Vd_scalar), fem.Function(self.Vd_scalar)
         self.amp_old.x.petsc_vec.set(1.0), self.amp_old_set.x.petsc_vec.set(1.0)
         (
@@ -338,6 +343,7 @@ class SolidmechanicsProblem(problem_base):
             self.mat_growth_trig,
             self.mat_growth_thres,
             self.mat_plastic,
+            self.mat_Tscale,
         ) = (
             [False] * self.num_domains,
             [False] * self.num_domains,
@@ -346,6 +352,7 @@ class SolidmechanicsProblem(problem_base):
             [None] * self.num_domains,
             [] * self.num_domains,
             [False] * self.num_domains,
+            [1.0] * self.num_domains,
         )
         self.mat_active_stress_type = ["ode"] * self.num_domains
 
@@ -372,6 +379,10 @@ class SolidmechanicsProblem(problem_base):
                 if self.activemodel[n] == "active_fiber" or self.activemodel[n] == "active_crossfiber":
                     assert bool(self.io.fiber_data)
                 self.mat_active_stress[n] = True
+
+                self.mat_Tscale[n] = self.constitutive_models["MAT" + str(n + 1)][self.activemodel[n]].get(
+                    "Tscale", 1.0
+                )
                 # get type of active stress
                 try:
                     self.mat_active_stress_type[n] = self.constitutive_models["MAT" + str(n + 1)][self.activemodel[n]][
@@ -1453,6 +1464,7 @@ class SolidmechanicsProblem(problem_base):
                     "prescribed_file"
                 ].replace("*", str(1 + (N - 1) % 1000)),
             )
+            self.tau_a.x.array[:] *= self.mat_Tscale[self.actpid - 1].value
 
     def evaluate_post_solve(self, t, N):
         # solve volume laplace (for cardiac benchmark)
