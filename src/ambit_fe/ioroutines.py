@@ -330,7 +330,6 @@ class IO:
         ci = 0
         for i in im:
             ind = np.where(ind_file == igi[ci])[0]
-
             # only read if we've found the index
             if len(ind):
                 if normalize:
@@ -479,9 +478,9 @@ class IO:
                 fib_func.append(fib_func_input[si])
 
             # assert that field is actually always normalized!
-            with io.XDMFFile(self.comm, self.output_path + "/fibers_" + str(si + 1) + ".xdmf", "w") as outfile:
-                outfile.write_mesh(self.mesh)
-                outfile.write_function(fib_func[si], 0)
+            # with io.XDMFFile(self.comm, self.output_path + "/fibers_" + str(si + 1) + ".xdmf", "w") as outfile:
+            #     outfile.write_mesh(self.mesh)
+            #     outfile.write_function(fib_func[si], 0)
             # fib_func[si] /= ufl.sqrt(ufl.dot(fib_func[si], fib_func[si]))
 
             si += 1
