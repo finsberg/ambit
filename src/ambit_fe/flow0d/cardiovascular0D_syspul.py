@@ -703,19 +703,22 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
             var_arr = var.array
 
         nc = len(self.c_)
+        try:
+            Q_v_l = var_arr[self.varmap["Q_v_l"]]
+            Q_v_r = var_arr[self.varmap["Q_v_r"]]
+        except KeyError:
+            self.V_v_l = var_arr[self.varmap["V_v_l"]]
+            self.V_v_r = var_arr[self.varmap["V_v_r"]]
+        else:
+            V_v_l_n = self.V_v_l_n
+            V_v_l_np = -Q_v_l * self.dt + V_v_l_n
+            self.V_v_l = 0.5 * (V_v_l_n + V_v_l_np)
+            self.V_v_l_n = V_v_l_np
 
-        Q_v_l = var_arr[self.varmap["Q_v_l"]]
-        Q_v_r = var_arr[self.varmap["Q_v_r"]]
-
-        V_v_l_n = self.V_v_l_n
-        V_v_l_np = -Q_v_l * self.dt + V_v_l_n
-        self.V_v_l = 0.5 * (V_v_l_n + V_v_l_np)
-        self.V_v_l_n = V_v_l_np
-
-        V_v_r_n = self.V_v_r_n
-        V_v_r_np = -Q_v_r * self.dt + V_v_r_n
-        self.V_v_r = 0.5 * (V_v_r_n + V_v_r_np)
-        self.V_v_r_n = V_v_r_np
+            V_v_r_n = self.V_v_r_n
+            V_v_r_np = -Q_v_r * self.dt + V_v_r_n
+            self.V_v_r = 0.5 * (V_v_r_n + V_v_r_np)
+            self.V_v_r_n = V_v_r_np
 
         total_volume = (
             aux[self.auxmap["V_at_l"]]
