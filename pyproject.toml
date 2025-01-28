@@ -25,7 +25,8 @@ keywords = [
 ]
 dependencies = [
     "mpmath",
-    "sympy"
+    "sympy",
+    "adios4dolfinx",
 ]
 
 [project.urls]

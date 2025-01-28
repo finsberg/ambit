@@ -108,6 +108,7 @@ class IO:
 
         # TODO: Currently, for coupled problems, all append to this dict, so output names should not conflict... hence, make this problem-specific!
         self.resultsfiles = {}
+        self.checkpointfiles = {}
 
         # entity map dict - for coupled multiphysics/multimesh problems
         self.entity_maps = entity_maps
@@ -526,8 +527,7 @@ class IO_solid(IO):
             if self.write_results_every > 0:
                 for res in pb.results_to_write:
                     if res not in self.results_pre:
-                        outfile = io.XDMFFile(
-                            self.comm,
+                        name = (
                             self.output_path
                             + "/results_"
                             + pb.pbase.simname
@@ -535,15 +535,25 @@ class IO_solid(IO):
                             + pb.problem_physics
                             + "_"
                             + res
-                            + ".xdmf",
+                            + ".xdmf"
+                        )
+
+                        outfile = io.XDMFFile(
+                            self.comm,
+                            name,
                             "w",
                         )
                         outfile.write_mesh(self.mesh)
                         self.resultsfiles[res] = outfile
+                        from pathlib import Path
+
+                        self.checkpointfiles[res] = Path(name).with_suffix(".bp")
 
             return
 
         else:
+            import adios4dolfinx
+
             # write results every write_results_every steps
             if self.write_results_every > 0 and N % self.write_results_every == 0:
                 # save solution to XDMF format
@@ -552,6 +562,9 @@ class IO_solid(IO):
                         u_out = fem.Function(pb.V_out_vector, name=pb.u.name)
                         u_out.interpolate(pb.u)
                         self.resultsfiles[res].write_function(u_out, indicator)
+                        adios4dolfinx.write_function_on_input_mesh(
+                            self.checkpointfiles[res], pb.u, time=indicator, name="displacement"
+                        )
                     elif res == "velocity":  # passed in v is not a function but form, so we have to project
                         self.v_proj = project(
                             pb.vel,
@@ -582,6 +595,9 @@ class IO_solid(IO):
                         p_out = fem.Function(pb.V_out_scalar, name=pb.p.name)
                         p_out.interpolate(pb.p)
                         self.resultsfiles[res].write_function(p_out, indicator)
+                        adios4dolfinx.write_function_on_input_mesh(
+                            self.checkpointfiles[res], pb.p, time=indicator, name="pressure"
+                        )
                     elif res == "cauchystress":
                         stressfuncs = []
                         for n in range(pb.num_domains):

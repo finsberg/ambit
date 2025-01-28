@@ -28,7 +28,7 @@ from .solid_material import activestress_activation
 from ..base import problem_base, solver_base
 
 
-"""
+r"""
 Solid mechanics governing equation
 
 \rho_{0} \ddot{\boldsymbol{u}} = \boldsymbol{\nabla}_{0} \cdot (\boldsymbol{F}\boldsymbol{S}) + \hat{\boldsymbol{b}}_{0} \quad \text{in} \; \Omega_{0} \times [0, T]
