@@ -6,6 +6,7 @@
 # This source code is licensed under the MIT-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+from pathlib import Path
 import sys, time
 import numpy as np
 from petsc4py import PETSc
@@ -430,6 +431,23 @@ class IO:
         s0.interpolate(geo.s0)
         return [f0, s0]
 
+    def readin_fiber_xdmf_legacy(self, fib_file, V_fib, dx_, domids):
+        import adios4dolfinx
+        import dolfinx
+
+        fiber = dolfinx.fem.Function(V_fib)
+        sheet = dolfinx.fem.Function(V_fib)
+        comm = V_fib.mesh.comm
+
+        adios4dolfinx.read_function_from_legacy_h5(
+            Path(fib_file).with_suffix(".h5"), comm, fiber, group="fiber", step=0
+        )
+        adios4dolfinx.read_function_from_legacy_h5(
+            Path(fib_file).with_suffix(".h5"), comm, sheet, group="sheet", step=0
+        )
+
+        return [fiber, sheet]
+
     # read in fibers defined at nodes (nodal fiber-coordiante files have to be present)
     def readin_fibers(self, fibarray, V_fib, dx_, domids, order_disp):
         ts = time.time()
@@ -442,8 +460,27 @@ class IO:
         except:
             self.order_fib_input = order_disp
 
-        # define input fiber function space
-        V_fib_input = fem.functionspace(self.mesh, ("Lagrange", self.order_fib_input, (self.mesh.geometry.dim,)))
+        # define input fiber function space (treat negative orders as discontinuous)
+        if self.order_fib_input <= 0:
+            V_fib_input = fem.functionspace(
+                self.mesh,
+                (
+                    "DG",
+                    -self.order_fib_input,
+                    (self.mesh.geometry.dim,),
+                ),
+            )
+        else:
+            V_fib_input = fem.functionspace(
+                self.mesh,
+                (
+                    "P",
+                    self.order_fib_input,
+                    (self.mesh.geometry.dim,),
+                ),
+            )
+        if len(self.fiber_data) > 0 and Path(self.fiber_data[0]).suffix == ".xdmf":
+            return self.readin_fiber_xdmf_legacy(self.fiber_data[0], V_fib_input, dx_, domids)
 
         si = 0
         for s in fibarray:
