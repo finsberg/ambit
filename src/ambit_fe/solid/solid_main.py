@@ -56,7 +56,7 @@ class SolidmechanicsProblem(problem_base):
             self.timint = time_params["timint"]
         except:
             self.timint = "static"
-
+        self.bcl = time_params.get("bcl", 1000.0)
         self.results_to_write = io_params["results_to_write"]
 
         self.io = io
@@ -1462,7 +1462,7 @@ class SolidmechanicsProblem(problem_base):
                 self.tau_a,
                 self.constitutive_models["MAT" + str(self.actpid)][self.activemodel[self.actpid - 1]][
                     "prescribed_file"
-                ].replace("*", str(1 + (N - 1) % 1000)),
+                ].replace("*", str(1 + (N - 1) % int(self.bcl))),
             )
             self.tau_a.x.array[:] *= self.mat_Tscale[self.actpid - 1].value
 
