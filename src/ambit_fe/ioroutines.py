@@ -11,6 +11,7 @@ import numpy as np
 from petsc4py import PETSc
 from dolfinx import fem, io, mesh
 import ufl
+from pathlib import Path
 # import adios4dolfinx
 
 from .solver.projection import project
@@ -74,10 +75,10 @@ class IO:
             # read in xdmf mesh - domain
             with io.XDMFFile(self.comm, self.mesh_domain, "r", encoding=encoding) as infile:
                 self.mesh = infile.read_mesh(name=self.gridname_domain)
-                try:
-                    self.mt_d = infile.read_meshtags(self.mesh, name=self.gridname_domain)
-                except:
-                    self.mt_d = None
+                # try:
+                #     self.mt_d = infile.read_meshtags(self.mesh, name=self.gridname_domain)
+                # except:
+                #     self.mt_d = None
 
         elif self.meshfile_format == "gmsh":
             # seems that we cannot infer the dimension from the mesh file but have to provide it to the read function...
@@ -374,7 +375,14 @@ class IO:
         self.order_fib_input = self.io_params.get("order_fib_input", order_disp)
 
         # define input fiber function space
-        V_fib_input = fem.functionspace(self.mesh, ("Lagrange", self.order_fib_input, (self.mesh.geometry.dim,)))
+        V_fib_input = fem.functionspace(
+            self.mesh,
+            (
+                "P",
+                self.order_fib_input,
+                (self.mesh.geometry.dim,),
+            ),
+        )
 
         si = 0
         for s in fibarray:
