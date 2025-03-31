@@ -28,7 +28,7 @@ from .solid_material import activestress_activation
 from ..base import problem_base, solver_base
 
 
-"""
+r"""
 Solid mechanics governing equation
 
 \rho_{0} \ddot{\boldsymbol{u}} = \boldsymbol{\nabla}_{0} \cdot (\boldsymbol{F}\boldsymbol{S}) + \hat{\boldsymbol{b}}_{0} \quad \text{in} \; \Omega_{0} \times [0, T]
@@ -53,6 +53,7 @@ class SolidmechanicsProblem(problem_base):
         self.problem_physics = "solid"
 
         self.timint = time_params.get("timint", "static")
+        self.bcl = time_params.get("bcl", 1000.0)
 
         self.results_to_write = io_params["results_to_write"]
 
@@ -1423,7 +1424,7 @@ class SolidmechanicsProblem(problem_base):
                 self.tau_a,
                 self.constitutive_models["MAT" + str(self.actpid)][self.activemodel[self.actpid - 1]][
                     "prescribed_file"
-                ].replace("*", str(N)),
+                ].replace("*", str(1 + (N - 1) % int(self.bcl))),
             )
 
     def evaluate_post_solve(self, t, N):

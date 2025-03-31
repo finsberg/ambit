@@ -163,6 +163,7 @@ def check_params_time_solid(params):
         "rho_inf_genalpha",
         "timint",
         "theta_ost",
+        "bcl",
     ]
 
     for k in params.keys():

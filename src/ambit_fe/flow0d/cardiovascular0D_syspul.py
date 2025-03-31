@@ -104,19 +104,6 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         self.R_vout_r_min = params["R_vout_r_min"]
         self.R_vout_r_max = params["R_vout_r_max"]
 
-        self.I_ext = params.get("I_ext", 0.0)
-        self.I_ext_start = params.get("I_ext_start", 0.0)
-        self.I_ext_duration = params.get("I_ext_duration", 0.0)
-        self.I_ext_period = params.get("I_ext_period", 100.0)
-        self.I_ext_bleed = params.get("I_ext_bleed", 100.0)
-        self.total_volume_loss = params.get("volume_loss", 0.0)
-
-        self.V_v_l = 0.0
-        self.V_v_r = 0.0
-        self.V_v_l_n = 0.0
-        self.V_v_r_n = 0.0
-        self.volume_change = 0.0
-
         # valve inertances
         self.L_vin_l = params.get("L_vin_l", 0.0)
         self.L_vin_r = params.get("L_vin_r", 0.0)
@@ -127,6 +114,19 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
         self.t_ed = params["t_ed"]
         self.t_es = params["t_es"]
         self.T_cycl = params["T_cycl"]
+
+        self.I_ext = params.get("I_ext", 0.0)
+        self.I_ext_current = 0.0
+        self.I_ext_start = params.get("I_ext_start", 0.0) * self.T_cycl
+        self.I_ext_duration = params.get("I_ext_duration", 0.0) * self.T_cycl
+        self.I_ext_period = params.get("I_ext_period", 100.0) * self.T_cycl
+        self.I_ext_bleed = params.get("I_ext_bleed", 100.0) * self.T_cycl
+        self.V_v_l = 0.0
+        self.V_v_r = 0.0
+        self.V_v_l_n = 0.0
+        self.V_v_r_n = 0.0
+        self.volume_change = 0.0
+        self.total_volume_loss = params.get("volume_loss", 0.0)
 
         # unstressed compartment volumes (for post-processing)
         self.V_at_l_u = params.get("V_at_l_u", 0.0)
@@ -253,6 +253,7 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
             if t % self.I_ext_period < self.I_ext_bleed:
                 I_ext = self.I_ext
 
+        self.I_ext_current = I_ext  # Just for logging
         extra_args = [I_ext]
 
         cardiovascular0Dbase.evaluate(self, x, t, df, f, dK, K, c, y, a, fnc, extra_args=extra_args)
@@ -694,7 +695,7 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
 
         self.volume_change = (total_volume - self.total_volume_start) / 1e3  # mL
 
-        utilities.print_status(f"I_ext: {self.I_ext:.2f}, Total volume change: {self.volume_change}", self.comm)
+        utilities.print_status(f"I_ext: {self.I_ext_current:.2f}, Total volume change: {self.volume_change}", self.comm)
 
         utilities.print_status("Output of 0D vascular model (syspul):", self.comm)
 
