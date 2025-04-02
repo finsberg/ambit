@@ -314,6 +314,7 @@ class SolidmechanicsProblem(problem_base):
             self.mat_growth_trig,
             self.mat_growth_thres,
             self.mat_plastic,
+            self.mat_Tscale,
         ) = (
             [False] * self.num_domains,
             [False] * self.num_domains,
@@ -322,6 +323,7 @@ class SolidmechanicsProblem(problem_base):
             [None] * self.num_domains,
             [] * self.num_domains,
             [False] * self.num_domains,
+            [1.0] * self.num_domains,
         )
         self.mat_active_stress_type = ["ode"] * self.num_domains
 
@@ -348,6 +350,10 @@ class SolidmechanicsProblem(problem_base):
                 if self.activemodel[n] == "active_fiber" or self.activemodel[n] == "active_crossfiber":
                     assert bool(self.io.fiber_data)
                 self.mat_active_stress[n] = True
+
+                self.mat_Tscale[n] = self.constitutive_models["MAT" + str(n + 1)][self.activemodel[n]].get(
+                    "Tscale", 1.0
+                )
                 # get type of active stress
                 try:
                     self.mat_active_stress_type[n] = self.constitutive_models["MAT" + str(n + 1)][self.activemodel[n]][
@@ -1424,8 +1430,9 @@ class SolidmechanicsProblem(problem_base):
                 self.tau_a,
                 self.constitutive_models["MAT" + str(self.actpid)][self.activemodel[self.actpid - 1]][
                     "prescribed_file"
-                ].replace("*", str(1 + (N - 1) % int(self.bcl))),
+                ].replace("*", str((N - 1) % int(self.bcl))),
             )
+            self.tau_a.x.array[:] *= self.mat_Tscale[self.actpid - 1].value
 
     def evaluate_post_solve(self, t, N):
         # solve volume laplace (for cardiac benchmark)
