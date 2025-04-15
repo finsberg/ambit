@@ -496,9 +496,25 @@ class IO_solid(IO):
                         u_out.interpolate(pb.u)
                         self.resultsfiles[res].write_function(u_out, indicator)
                         import adios4dolfinx
+    
+                        num_beats = int(indicator / self.io_params.get("bcl", 1.0)) + 1
+
+                        # FIXME: Add another flag to indicate if we want to delete old files
+                        if num_beats > 2:
+                            # Delete old files to save space
+                            for i in range(1, num_beats - 1):
+                                name = self.checkpointfiles[res].stem + f"_N_{i}"
+                                bpfname = self.checkpointfiles[res].with_name(name).with_suffix(".bp")
+                                if bpfname.exists():
+                                    import shutil
+                                    shutil.rmtree(bpfname, ignore_errors=True)
+
+                        name = self.checkpointfiles[res].stem + f"_N_{num_beats}"
+                        bpfname = self.checkpointfiles[res].with_name(name).with_suffix(".bp")
+                        # print(indicator)
 
                         adios4dolfinx.write_function_on_input_mesh(
-                            self.checkpointfiles[res], pb.u, time=indicator, name="displacement"
+                            bpfname, u_out, time=indicator, name="displacement"
                         )
                     elif res == "velocity":  # passed in v is not a function but form, so we have to project
                         self.v_proj = project(
