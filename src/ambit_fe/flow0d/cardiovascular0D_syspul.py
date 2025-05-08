@@ -666,8 +666,28 @@ class cardiovascular0Dsyspul(cardiovascular0Dbase):
             Q_v_l = var_arr[self.varmap["Q_v_l"]]
             Q_v_r = var_arr[self.varmap["Q_v_r"]]
         except KeyError:
-            self.V_v_l = var_arr[self.varmap["V_v_l"]]
-            self.V_v_r = var_arr[self.varmap["V_v_r"]]
+            try:
+                self.V_v_l = var_arr[self.varmap["V_v_l"]]
+                self.V_v_r = var_arr[self.varmap["V_v_r"]]
+            except KeyError:
+
+                q_v_l_i = var_arr[self.varmap["q_vin_l"]]
+                q_v_l_o = var_arr[self.varmap["q_vout_l"]]
+                q_v_r_i = var_arr[self.varmap["q_vin_r"]]
+                q_v_r_o = var_arr[self.varmap["q_vout_r"]]
+             
+                Q_v_l = -q_v_l_i + q_v_l_o
+                Q_v_r = -q_v_r_i + q_v_r_o
+
+                V_v_l_n = self.V_v_l_n
+                V_v_l_np = -Q_v_l * self.dt + V_v_l_n
+                self.V_v_l = 0.5 * (V_v_l_n + V_v_l_np)
+                self.V_v_l_n = V_v_l_np
+
+                V_v_r_n = self.V_v_r_n
+                V_v_r_np = -Q_v_r * self.dt + V_v_r_n
+                self.V_v_r = 0.5 * (V_v_r_n + V_v_r_np)
+                self.V_v_r_n = V_v_r_np
         else:
             V_v_l_n = self.V_v_l_n
             V_v_l_np = -Q_v_l * self.dt + V_v_l_n
